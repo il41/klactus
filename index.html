@@ -31,6 +31,7 @@
       cursor: default;
       transition: opacity 1s ease;
       opacity: 1;
+      user-select: none;
     }
 
     .overlay-content {
@@ -167,12 +168,21 @@
     });
 
     // Bump Chrome material
-      const bumpMaterial = new THREE.MeshStandardMaterial({
+    const bumpMaterial = new THREE.MeshStandardMaterial({
       metalness: 1.2,
       roughness: 0.1,
       envMapIntensity: 0.7,
       normalMap: normalTexture,
       normalScale: new THREE.Vector2(0.1,0.1),
+    });
+
+    // Text Bump Chrome material
+    const bumpTextMaterial = new THREE.MeshStandardMaterial({
+      metalness: 1.2,
+      roughness: 0.1,
+      envMapIntensity: 0.7,
+      normalMap: normalTexture,
+      normalScale: new THREE.Vector2(0,0),
     });
     
 
@@ -193,7 +203,7 @@
       font: font,
       size: 0.7,
       height: 0,
-      curveSegments: 12,
+      curveSegments: 32,
       bevelEnabled: true,
       bevelThickness: 0.1,
       bevelSize: 0.05,
@@ -237,7 +247,7 @@
     // textGeometry.computeVertexNormals();
 
 
-    textMesh = new THREE.Mesh(textGeometry, chromeMaterial);
+    textMesh = new THREE.Mesh(textGeometry, bumpTextMaterial);
 
     // SHIFT BACK to center pivot properly
     textMesh.position.z = -textRadius;
@@ -295,7 +305,7 @@
 
       if (intersects.length > 0 && isOverlay==false) {
           // console.log(intersects);
-          window.open('https://klactusvintage.com/', '_blank');
+          window.open('https://klactusvintage.com/index.html', '_blank');
       }
   }
 
