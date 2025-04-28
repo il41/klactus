@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>KLACTUS</title>
+  <style>
+    html, body {
+      margin: 0;
+      overflow: hidden;
+      height: 100%;
+      background: black;
+      /* cursor: pointer; */
+      background:url("img/spacestars.jpg");
+      background-size:cover;
+    }
+    canvas {
+      display: block;
+    }
+    .overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.75);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      z-index: 10;
+      cursor: default;
+      transition: opacity 1s ease;
+      opacity: 1;
+    }
+
+    .overlay-content {
+      color: white;
+      font-size: 5rem;
+      text-align: center;
+      font-family: 'Arial', sans-serif;
+      font-family:Arial, Helvetica, sans-serif;
+    }
+
+    .overlay-content small {
+      display: block;
+      margin-top: 2rem;
+      font-size: 2rem;
+      opacity: 0.7;
+    }
+    
+    .stretch {
+      transform: scaleY(5);
+      transform: scalex(3);
+    }
+
+  </style>
+
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.155.0/examples/jsm/"
+    }
+  }
+  </script>
+
+</head>
+<body>
+
+  <div class="overlay">
+    <div class="overlay-content">
+      <span class="stretch">KLACTUS VINTAGE</span>
+      <small>Click to Enter</small>
+    </div>
+  </div>
+  <audio id="backgroundAudio" src="klactus.mp3" preload="auto" style="display:none;"></audio>
+
+<script type="module">
+  import * as THREE from 'three';   
+  import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+  import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
+
+  let scene, camera, renderer, sphere, textMesh, listener, sound;
+  let raycaster, mouse;
+  let startingFov = 180;
+  let targetFov = 80;
+  let lerpingFov = false;
+  let isOverlay = true;
+  const clock = new THREE.Clock();
+
+
+  init();
+  animate();
+
+  function init() {
+    scene = new THREE.Scene();
+
+    const fovCamera = true;
+    if (fovCamera){
+      camera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.z = 2;
+      camera.position.y = -0.3;
+      camera.rotation.x = 0.1;
+    } else {
+      camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.z = 5;
+    }
+
+    //camera animation and overlay
+    camera.fov = startingFov;
+    camera.updateProjectionMatrix();
+
+    const audio = document.getElementById('backgroundAudio');
+
+    const overlay=document.querySelector('.overlay');
+    overlay.addEventListener('click', () => {
+      overlay.style.opacity = 0;
+
+      setTimeout(() => {
+        overlay.style.display = 'none';
+        isOverlay=false;
+      }, 2000); // Shorter fadeout maybe?
+
+      audio.play(); // ← Start HTML5 audio instead of Three.js Audio
+
+      if(lerpingFov == false) {
+        textMesh.rotation.y = -180;
+      }
+      lerpingFov = true;
+    });
+
+
+
+
+    renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha:true
+    });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    document.body.appendChild(renderer.domElement);
+    renderer.setClearColor(0x000000, 0);  // 0x000000 for black, 0 for fully transparent
+
+    raycaster = new THREE.Raycaster();
+    mouse = new THREE.Vector2();
+
+    // Space background
+    const loader = new THREE.TextureLoader();
+    loader.load('img/virgogalaxies.jpg', function(texture) {
+      texture.mapping = THREE.EquirectangularReflectionMapping;
+      // scene.background = texture;
+      scene.environment = texture;
+    });
+
+    // load space background again with regular texture mapping
+    const texture = new THREE.TextureLoader().load('img/spacestars.jpg');
+    const normalTexture = loader.load('img/moon_normal_map.jpg');
+
+    // scene.background = texture;
+    texture.toneMapped = false;
+
+    // Chrome material
+    const chromeMaterial = new THREE.MeshStandardMaterial({
+      metalness: 1.2,
+      roughness: 0.1,
+      envMapIntensity: 0.7,
+    });
+
+    // Bump Chrome material
+      const bumpMaterial = new THREE.MeshStandardMaterial({
+      metalness: 1.2,
+      roughness: 0.1,
+      envMapIntensity: 0.7,
+      normalMap: normalTexture,
+      normalScale: new THREE.Vector2(0.1,0.1),
+    });
+    
+
+
+    // Sphere
+    const geometry = new THREE.SphereGeometry(1, 64, 64);
+    sphere = new THREE.Mesh(geometry, bumpMaterial);
+    scene.add(sphere);
+    sphere.position.set(0, 0, -1.5);
+    sphere.scale.set(1.4,1.4,1.4);
+
+    
+
+    // Text
+    const fontLoader = new FontLoader();
+    fontLoader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function(font) {
+    const textGeometry = new TextGeometry('KLACTUS', {
+      font: font,
+      size: 0.7,
+      height: 0,
+      curveSegments: 12,
+      bevelEnabled: true,
+      bevelThickness: 0.1,
+      bevelSize: 0.05,
+      bevelSegments: 10
+    });
+
+    textGeometry.center();
+
+    const sphereRadius = 1.3;
+    const textRadius = sphereRadius + 0.02;
+    const stretchFactor = 0.9;
+    const verticalOffset = 0.0;
+
+    textGeometry.computeBoundingBox();
+    const boundingBox = textGeometry.boundingBox;
+    const textWidth = boundingBox.max.x - boundingBox.min.x;
+
+    const positionAttribute = textGeometry.attributes.position;
+    const vector = new THREE.Vector3();
+
+    for (let i = 0; i < positionAttribute.count; i++) {
+      vector.fromBufferAttribute(positionAttribute, i);
+
+      // Center the text based on its bounding box
+      const centeredX = vector.x - (boundingBox.min.x + textWidth / 2);
+
+      // Compute angle based on centered x and stretch
+      const angle = (centeredX / textWidth) * Math.PI / stretchFactor;
+
+      const currentRadius = textRadius + vector.z; 
+      // vector.z is the original "extrusion" depth! use it to push outward
+
+      const newX = Math.sin(angle) * currentRadius;
+      const newZ = Math.cos(angle) * currentRadius;
+      const newY = vector.y + verticalOffset;
+
+      positionAttribute.setXYZ(i, newX, newY, newZ);
+    }
+
+    positionAttribute.needsUpdate = true;
+    // textGeometry.computeVertexNormals();
+
+
+    textMesh = new THREE.Mesh(textGeometry, chromeMaterial);
+
+    // SHIFT BACK to center pivot properly
+    textMesh.position.z = -textRadius;
+    textMesh.rotation.y = -180;
+    // textMesh.rotation.x = -0.2;
+
+    scene.add(textMesh);
+
+  });
+
+
+
+    // Lighting
+    const light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.set(5, 5, 5);
+    scene.add(light);
+
+    window.addEventListener('resize', onWindowResize);
+
+    console.log("▗▖.▗▖▗▖....▗▄▖..▗▄▄▖▗▄▄▄▖▗▖.▗▖.▗▄▄▖\n▐▌▗▞▘▐▌...▐▌.▐▌▐▌.....█..▐▌.▐▌▐▌...\n▐▛▚▖.▐▌...▐▛▀▜▌▐▌.....█..▐▌.▐▌.▝▀▚▖\n▐▌.▐▌▐▙▄▄▖▐▌.▐▌▝▚▄▄▖..█..▝▚▄▞▘▗▄▄▞▘\n...................................\n...................................\n...................................\nwww.klactusvintage.com.............\n...................................\n......landing page by www.ilai.link");
+  }
+
+  //RAYCASTING
+  document.body.addEventListener('click', onClick);
+  document.body.addEventListener('mousemove', onMouseMove);
+
+  function onMouseMove(event) {
+    // Update mouse position
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+
+    // Check intersections
+    const intersects = raycaster.intersectObjects([sphere, textMesh]);
+
+    if (intersects.length > 0 && isOverlay==false) {
+        document.body.style.cursor = 'crosshair'; // Change cursor to cross
+    } else {
+        document.body.style.cursor = 'default'; // Reset cursor
+    }
+}
+
+  function onClick(event) {
+      // Convert mouse click position to normalized device coordinates (-1 to +1) for both components
+      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+      console.log(mouse.x, mouse.y);  // Debug: log the mouse coordinates
+
+      // Update the picking ray with the camera and mouse position
+      raycaster.setFromCamera(mouse, camera);  // No need for `raycaster.update()`
+
+      // Check intersections with the sphere and text
+      const intersects = getIntersections(raycaster);
+
+      if (intersects.length > 0 && isOverlay==false) {
+          // console.log(intersects);
+          window.open('https://klactusvintage.com/', '_blank');
+      }
+  }
+
+  // Function to check intersections
+  function getIntersections(raycaster) {
+      const intersects = [];
+      const objectsToTest = [sphere, textMesh];  // Add the objects you want to check for
+
+      for (let object of objectsToTest) {
+          const intersection = getIntersection(raycaster, object);
+          if (intersection) intersects.push(intersection);
+      }
+
+      return intersects;
+  }
+
+  // Check if ray intersects the object
+  function getIntersection(raycaster, object) {
+      const intersects = raycaster.intersectObject(object);
+      return intersects.length > 0 ? intersects[0] : null;
+  }
+
+
+  function animate() {
+    requestAnimationFrame(animate);
+    const delta = clock.getDelta();
+
+      // Lerp camera FOV if we're supposed to
+      if (lerpingFov) {
+      const targetFov = 80; // your original desired FOV
+      const speed = 1; // how fast the FOV changes (adjust if you want)
+
+      camera.fov += (targetFov - camera.fov) * delta * speed;
+
+      // Optional: if very close, snap to targetFov to avoid tiny errors
+      if (Math.abs(camera.fov - targetFov) < 0.1) {
+        // camera.fov = targetFov;
+        lerpingFov = false; // stop lerping
+        isOverlay=false;
+      }
+      camera.updateProjectionMatrix();
+    }
+
+    if (sphere) sphere.rotation.y -= delta * 0.6;
+    if (textMesh) textMesh.rotation.y -= delta * 0.6;
+    
+    renderer.render(scene, camera);
+
+  }
+
+  function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  }
+</script>
+
+</body>
+</html>

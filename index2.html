@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Three.js GLTF Scene</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <!-- Import Three.js and GLTFLoader -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+  <script>
+    let scene, camera, renderer, gltfModel;
+
+    // Initialize the scene
+    function init() {
+      scene = new THREE.Scene();
+
+      // Set up the camera
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.z = 5;
+
+      // Set up the renderer
+      renderer = new THREE.WebGLRenderer();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      // Set up the space background
+      const texture = new THREE.TextureLoader().load('img/spacestars.jpg');
+      scene.background = texture;
+
+      // Load the glTF model (klactus.glb)
+      const gltfLoader = new THREE.GLTFLoader();
+      gltfLoader.load('obj/klactus.glb', (gltf) => {
+        gltfModel = gltf.scene;
+        gltfModel.scale.set(1.4, 1.4, 1.4);  // Scale the model
+        scene.add(gltfModel);
+
+        // Apply reflective/metallic material
+        gltfModel.traverse((child) => {
+          if (child.isMesh) {
+            const material = new THREE.MeshStandardMaterial({
+              color: 0xaaaaaa,
+              roughness: 0.7,
+              metalness: 0.7,
+              flatShading: false
+            });
+            child.material = material;
+          }
+        });
+      });
+
+      // Add lights
+      const light = new THREE.AmbientLight(0xffffff,1); // Ambient light
+      scene.add(light);
+
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+      directionalLight.position.set(5, 5, 5).normalize();
+      scene.add(directionalLight);
+
+      // Handle window resizing
+      window.addEventListener('resize', onWindowResize, false);
+
+      animate();
+    }
+
+    // Handle window resizing
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    // Animate the scene (spin the glTF model)
+    function animate() {
+      requestAnimationFrame(animate);
+      if (gltfModel) {
+        // gltfModel.rotation.x += 0.01;
+        gltfModel.rotation.y -= 0.005;
+      }
+      renderer.render(scene, camera);
+    }
+
+    // Initialize the scene
+    init();
+  </script>
+</body>
+</html>
